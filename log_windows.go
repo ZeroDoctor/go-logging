@@ -7,101 +7,132 @@ package logging
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"syscall"
 )
 
 var (
-	kernel32DLL                 = syscall.NewLazyDLL("kernel32.dll")
-	setConsoleTextAttributeProc = kernel32DLL.NewProc("SetConsoleTextAttribute")
+	kernel32DLL    = syscall.NewLazyDLL("kernel32.dll")
+	setConsoleMode = kernel32DLL.NewProc("SetConsoleMode")
+	kernelSetup    = false
 )
+
+const EnableVirtualTerminalProcessing uint32 = 0x4
 
 // Character attributes
 // Note:
 // -- The attributes are combined to produce various colors (e.g., Blue + Green will create Cyan).
 //    Clearing all foreground or background colors results in black; setting all creates white.
 // See https://msdn.microsoft.com/en-us/library/windows/desktop/ms682088(v=vs.85).aspx#_win32_character_attributes.
+type color int
+
 const (
-	fgBlack     = 0x0000
-	fgBlue      = 0x0001
-	fgGreen     = 0x0002
-	fgCyan      = 0x0003
-	fgRed       = 0x0004
-	fgMagenta   = 0x0005
-	fgYellow    = 0x0006
-	fgWhite     = 0x0007
-	fgIntensity = 0x0008
-	fgMask      = 0x000F
+	ColorBlack color = iota + 30
+	ColorRed
+	ColorGreen
+	ColorYellow
+	ColorBlue
+	ColorMagenta
+	ColorCyan
+	ColorWhite
 )
 
 var (
-	colors = []uint16{
-		INFO:     fgWhite,
-		CRITICAL: fgMagenta,
-		ERROR:    fgRed,
-		WARNING:  fgYellow,
-		NOTICE:   fgGreen,
-		DEBUG:    fgCyan,
+	colors = []string{
+		CRITICAL: ColorSeq(ColorMagenta),
+		ERROR:    ColorSeq(ColorRed),
+		WARNING:  ColorSeq(ColorYellow),
+		NOTICE:   ColorSeq(ColorGreen),
+		DEBUG:    ColorSeq(ColorCyan),
 	}
-	boldcolors = []uint16{
-		INFO:     fgWhite | fgIntensity,
-		CRITICAL: fgMagenta | fgIntensity,
-		ERROR:    fgRed | fgIntensity,
-		WARNING:  fgYellow | fgIntensity,
-		NOTICE:   fgGreen | fgIntensity,
-		DEBUG:    fgCyan | fgIntensity,
+	boldcolors = []string{
+		CRITICAL: ColorSeqBold(ColorMagenta),
+		ERROR:    ColorSeqBold(ColorRed),
+		WARNING:  ColorSeqBold(ColorYellow),
+		NOTICE:   ColorSeqBold(ColorGreen),
+		DEBUG:    ColorSeqBold(ColorCyan),
 	}
 )
-
-type file interface {
-	Fd() uintptr
-}
 
 // LogBackend utilizes the standard log module.
 type LogBackend struct {
 	Logger *log.Logger
 	Color  bool
 
-	// f is set to a non-nil value if the underlying writer which logs writes to
-	// implements the file interface. This makes us able to colorise the output.
-	f file
+	ColorConfig []string
 }
 
 // NewLogBackend creates a new LogBackend.
 func NewLogBackend(out io.Writer, prefix string, flag int) *LogBackend {
-	b := &LogBackend{Logger: log.New(out, prefix, flag)}
+	if !kernelSetup {
+		kernelSetup = true
+		var mode uint32
+		err := syscall.GetConsoleMode(syscall.Stdout, &mode)
+		if err != nil {
+			panic(err) // TODO: check if panic is wanted
+		}
+		mode |= EnableVirtualTerminalProcessing
 
-	// Unfortunately, the API used only takes an io.Writer where the Windows API
-	// need the actual fd to change colors.
-	if f, ok := out.(file); ok {
-		b.f = f
+		ret, _, err := setConsoleMode.Call(uintptr(syscall.Stdout), uintptr(mode))
+		if ret == 0 {
+			panic(err)
+		}
 	}
 
-	return b
+	return &LogBackend{Logger: log.New(out, prefix, flag)}
 }
 
+// Log implements the Backend interface.
 func (b *LogBackend) Log(level Level, calldepth int, rec *Record) error {
-	if b.Color && b.f != nil {
+	if b.Color {
+		col := colors[level]
+		if len(b.ColorConfig) > int(level) && b.ColorConfig[level] != "" {
+			col = b.ColorConfig[level]
+		}
+
 		buf := &bytes.Buffer{}
-		setConsoleTextAttribute(b.f, colors[level])
+		buf.Write([]byte(col))
 		buf.Write([]byte(rec.Formatted(calldepth + 1)))
-		err := b.Logger.Output(calldepth+2, buf.String())
-		setConsoleTextAttribute(b.f, fgWhite)
-		return err
+		buf.Write([]byte("\x1b[0m"))
+		// For some reason, the Go logger arbitrarily decided "2" was the correct
+		// call depth...
+		return b.Logger.Output(calldepth+2, buf.String())
 	}
+
 	return b.Logger.Output(calldepth+2, rec.Formatted(calldepth+1))
 }
 
-// setConsoleTextAttribute sets the attributes of characters written to the
-// console screen buffer by the WriteFile or WriteConsole function.
-// See http://msdn.microsoft.com/en-us/library/windows/desktop/ms686047(v=vs.85).aspx.
-func setConsoleTextAttribute(f file, attribute uint16) bool {
-	ok, _, _ := setConsoleTextAttributeProc.Call(f.Fd(), uintptr(attribute), 0)
-	return ok != 0
+// ConvertColors takes a list of ints representing colors for log levels and
+// converts them into strings for ANSI color formatting
+func ConvertColors(colors []int, bold bool) []string {
+	converted := []string{}
+	for _, i := range colors {
+		if bold {
+			converted = append(converted, ColorSeqBold(color(i)))
+		} else {
+			converted = append(converted, ColorSeq(color(i)))
+		}
+	}
+
+	return converted
+}
+
+func ColorSeq(color color) string {
+	return fmt.Sprintf("\x1b[%dm", int(color))
+}
+
+func ColorSeqBold(color color) string {
+	return fmt.Sprintf("\x1b[1;%dm", int(color))
 }
 
 func doFmtVerbLevelColor(layout string, level Level, output io.Writer) {
-	// TODO not supported on Windows since the io.Writer here is actually a
-	// bytes.Buffer.
+	if layout == "bold" {
+		output.Write([]byte(boldcolors[level]))
+	} else if layout == "reset" {
+		output.Write([]byte("\x1b[0m"))
+	} else {
+		output.Write([]byte(colors[level]))
+	}
 }
