@@ -286,26 +286,21 @@ func (f *stringFormatter) Format(calldepth int, r *Record, output io.Writer) err
 			}
 			output.Write([]byte(formatCallpath(calldepth+1, depth)))
 		} else {
+			// ? break outside the loop or the switch
 			var v interface{}
 			switch part.verb {
 			case fmtVerbLevel:
 				v = r.Level
-				break
 			case fmtVerbID:
 				v = r.ID
-				break
 			case fmtVerbPid:
 				v = pid
-				break
 			case fmtVerbProgram:
 				v = program
-				break
 			case fmtVerbModule:
 				v = r.Module
-				break
 			case fmtVerbMessage:
 				v = r.Message()
-				break
 			case fmtVerbLongfile, fmtVerbShortfile:
 				_, file, line, ok := runtime.Caller(calldepth + 1)
 				if !ok {
