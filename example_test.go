@@ -1,8 +1,11 @@
 package logging
 
-import "os"
+import (
+	"os"
+	"testing"
+)
 
-func Example() {
+func TestExample(t *testing.T) {
 	// This call is for testing purposes and will set the time to unix epoch.
 	InitForTesting(DEBUG)
 
@@ -19,7 +22,7 @@ func Example() {
 	// information to the output, including the used log level and the name of
 	// the function.
 	var format = MustStringFormatter(
-		`%{time:15:04:05.000} %{shortfunc} %{level:.1s} %{message}`,
+		`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
 	)
 	backend2Formatter := NewBackendFormatter(backend2, format)
 
@@ -30,8 +33,12 @@ func Example() {
 	// Set the backends to be used and the default level.
 	SetBackend(backend1, backend2Leveled)
 
-	log.Debugf("debug %s", "arg")
-	log.Error("error")
+	log.Debugf("debug %s", Password("secret"))
+	log.Info("info")
+	log.Notice("notice")
+	log.Warning("warning")
+	log.Error("err")
+	log.Critical("crit")
 
 	// Output:
 	// debug arg

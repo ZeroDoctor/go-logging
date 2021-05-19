@@ -22,7 +22,7 @@ func TestFormat(t *testing.T) {
 	log.Debug("hello")
 
 	line := MemoryRecordN(backend, 0).Formatted(0)
-	if "format_test.go:24 1970-01-01T00:00:00 D 0001 module hello" != line {
+	if line != "format_test.go:24 1970-01-01T00:00:00 D 0001 module hello" {
 		t.Errorf("Unexpected format: %s", line)
 	}
 }
@@ -51,7 +51,7 @@ func TestRealFuncFormat(t *testing.T) {
 	SetFormatter(MustStringFormatter("%{shortfunc}"))
 
 	line := realFunc(backend)
-	if "realFunc" != line {
+	if line != "realFunc" {
 		t.Errorf("Unexpected format: %s", line)
 	}
 }
@@ -62,7 +62,7 @@ func TestStructFuncFormat(t *testing.T) {
 
 	var x structFunc
 	line := x.Log(backend)
-	if "structFunc.Log" != line {
+	if line != "structFunc.Log" {
 		t.Errorf("Unexpected format: %s", line)
 	}
 }
@@ -76,7 +76,7 @@ func TestVarFuncFormat(t *testing.T) {
 	}
 
 	line := varFunc()
-	if "???" == line || "TestVarFuncFormat" == line || "varFunc" == line {
+	if line == "???" || line == "TestVarFuncFormat" || line == "varFunc" {
 		t.Errorf("Unexpected format: %s", line)
 	}
 }
@@ -156,10 +156,10 @@ func TestBackendFormatter(t *testing.T) {
 
 	log := MustGetLogger("module")
 	log.Info("foo")
-	if "foo" != getLastLine(b1) {
+	if getLastLine(b1) != "foo" {
 		t.Errorf("Unexpected line: %s", getLastLine(b1))
 	}
-	if "INFO foo" != getLastLine(b2) {
+	if getLastLine(b2) != "INFO foo" {
 		t.Errorf("Unexpected line: %s", getLastLine(b2))
 	}
 }
