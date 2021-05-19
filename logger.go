@@ -70,7 +70,7 @@ func (r *Record) Message() string {
 	if r.message == nil {
 		// Redact the arguments that implements the Redactor interface
 		for i, arg := range r.Args {
-			if redactor, ok := arg.(Redactor); ok == true {
+			if redactor, ok := arg.(Redactor); ok {
 				r.Args[i] = redactor.Redacted()
 			}
 		}
