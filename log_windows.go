@@ -1,4 +1,6 @@
+//go:build windows
 // +build windows
+
 // Copyright 2013, Örjan Persson. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -66,12 +68,15 @@ type LogBackend struct {
 
 // NewLogBackend creates a new LogBackend.
 func NewLogBackend(out io.Writer, prefix string, flag int) *LogBackend {
+	backend := &LogBackend{Logger: log.New(out, prefix, flag)}
+
 	if !kernelSetup {
 		kernelSetup = true
 		var mode uint32
 		err := syscall.GetConsoleMode(syscall.Stdout, &mode)
 		if err != nil {
-			panic(err) // TODO: check if panic is wanted
+			fmt.Println("[go-logging] failed to setup console kernel")
+			return backend
 		}
 		mode |= EnableVirtualTerminalProcessing
 
@@ -81,7 +86,7 @@ func NewLogBackend(out io.Writer, prefix string, flag int) *LogBackend {
 		}
 	}
 
-	return &LogBackend{Logger: log.New(out, prefix, flag)}
+	return backend
 }
 
 // Log implements the Backend interface.
