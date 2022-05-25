@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -98,6 +99,8 @@ type Logger struct {
 	// ExtraCallDepth can be used to add additional call depth when getting the
 	// calling function. This is normally used when wrapping a logger.
 	ExtraCalldepth int
+
+	mutex sync.Mutex
 }
 
 // SetBackend overrides any previously defined backend for this logger.
@@ -154,6 +157,9 @@ func (l *Logger) log(lvl Level, format *string, args ...interface{}) {
 		fmt:    format,
 		Args:   args,
 	}
+
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	// TODO use channels to fan out the records to all backends?
 	// TODO in case of errors, do something (tricky)
