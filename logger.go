@@ -158,9 +158,6 @@ func (l *Logger) log(lvl Level, format *string, args ...interface{}) {
 		Args:   args,
 	}
 
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-
 	// TODO use channels to fan out the records to all backends?
 	// TODO in case of errors, do something (tricky)
 
