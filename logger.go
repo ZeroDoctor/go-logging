@@ -202,61 +202,85 @@ func (l *Logger) Panicf(format string, args ...interface{}) {
 
 // Critical logs a message using CRITICAL as log level.
 func (l *Logger) Critical(args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(CRITICAL, nil, args...)
 }
 
 // Criticalf logs a message using CRITICAL as log level.
 func (l *Logger) Criticalf(format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(CRITICAL, &format, args...)
 }
 
 // Error logs a message using ERROR as log level.
 func (l *Logger) Error(args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(ERROR, nil, args...)
 }
 
 // Errorf logs a message using ERROR as log level.
 func (l *Logger) Errorf(format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(ERROR, &format, args...)
 }
 
 // Warning logs a message using WARNING as log level.
 func (l *Logger) Warning(args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(WARNING, nil, args...)
 }
 
 // Warningf logs a message using WARNING as log level.
 func (l *Logger) Warningf(format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(WARNING, &format, args...)
 }
 
 // Notice logs a message using NOTICE as log level.
 func (l *Logger) Notice(args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(NOTICE, nil, args...)
 }
 
 // Noticef logs a message using NOTICE as log level.
 func (l *Logger) Noticef(format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(NOTICE, &format, args...)
 }
 
 // Info logs a message using INFO as log level.
 func (l *Logger) Info(args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(INFO, nil, args...)
 }
 
 // Infof logs a message using INFO as log level.
 func (l *Logger) Infof(format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(INFO, &format, args...)
 }
 
 // Debug logs a message using DEBUG as log level.
 func (l *Logger) Debug(args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(DEBUG, nil, args...)
 }
 
 // Debugf logs a message using DEBUG as log level.
 func (l *Logger) Debugf(format string, args ...interface{}) {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 	l.log(DEBUG, &format, args...)
 }
 
